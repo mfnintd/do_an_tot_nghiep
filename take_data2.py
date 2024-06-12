@@ -20,7 +20,7 @@ h3: khoảng cách từ hông đến đầu gối: 24 -> 26
 h4: khoảng cách từ vai đến hông: 11-12 -> 23-24
 h5: khoảng cách từ mũi đến trung điểm của vai: 0 -> 11-12
 """
-h1 = h2 = h3 = h4 = h5 = 0
+h1 = h2 = h3 = h4 = h5 = height = 0
 
 df = pd.read_csv('data/data.csv')
 print(df.shape[0])
@@ -34,17 +34,21 @@ detector = vision.PoseLandmarker.create_from_options(options)
 def show_camera():
     global cur_frame
     _, frame = cap.read()
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    #frame = cv2.cvtColor(frame)
+    #print(frame.shape)
+    frame = frame[:, 200:440].copy()
+    #print(frame)
+    #cv2.imshow('hehe', frame)
+    #print(frame)
     #
     #TODO: Chỗ này xử lý với frame
     img = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
-
     detection_result = detector.detect(img)
     #print(len(detection_result))
     frame = draw_landmarks_on_image(img.numpy_view(), detection_result)
 
     frame = cv2.flip(frame, 1)
-
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     #cv2_imshow(cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR))
     #
     cur_frame = frame
@@ -56,41 +60,45 @@ def show_camera():
     lbl.after(10, show_camera)
 
 def draw_landmarks_on_image(rgb_image, detection_result):
-  global h1, h2, h3, h4, h5
+  global h1, h2, h3, h4, h5, height
 
   pose_landmarks_list = detection_result.pose_landmarks
   annotated_image = np.copy(rgb_image)
   
   # Loop through the detected poses to visualize.
   for idx in range(len(pose_landmarks_list)):
-    pose_landmarks = pose_landmarks_list[idx]
-    
-    # Draw the pose landmarks.
-    pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
-    pose_landmarks_proto.landmark.extend([
+      pose_landmarks = pose_landmarks_list[idx]
+
+      # Draw the pose landmarks.
+      pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+      pose_landmarks_proto.landmark.extend([
       landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in pose_landmarks
-    ])
+      ])
 
-    landmark_coordinates = [np.array((landmark.x, landmark.y, landmark.z)) for landmark in pose_landmarks] 
+      #landmark_coordinates = [np.array((landmark.x, landmark.y, landmark.z)) for landmark in pose_landmarks] 
+      landmark_coordinates = [np.array((landmark.x, landmark.y, 0)) for landmark in pose_landmarks] 
 
-    h1 = helper.disR2PQ(landmark_coordinates[30], landmark_coordinates[32], landmark_coordinates[28])
+      h1 = helper.disR2PQ(landmark_coordinates[30], landmark_coordinates[32], landmark_coordinates[28])
 
-    h2 = helper.disPoint2Point(landmark_coordinates[26], landmark_coordinates[28])
+      h2 = helper.disPoint2Point(landmark_coordinates[26], landmark_coordinates[28])
 
-    h3 = helper.disPoint2Point(landmark_coordinates[24], landmark_coordinates[26])
-    
-    h4 = helper.disPoint2Point(helper.middlePoint(landmark_coordinates[11], landmark_coordinates[12]),
-                               helper.middlePoint(landmark_coordinates[23], landmark_coordinates[24]))
-    
-    h5 = helper.disPoint2Point(landmark_coordinates[0], 
-                               helper.middlePoint(landmark_coordinates[11], landmark_coordinates[12]))
-    #print(h1, h2, h3, h4, h5)
+      h3 = helper.disPoint2Point(landmark_coordinates[24], landmark_coordinates[26])
 
-    solutions.drawing_utils.draw_landmarks(
+      h4 = helper.disPoint2Point(helper.middlePoint(landmark_coordinates[11], landmark_coordinates[12]),
+                                 helper.middlePoint(landmark_coordinates[23], landmark_coordinates[24]))
+
+      h5 = helper.disPoint2Point(landmark_coordinates[0], 
+                                 helper.middlePoint(landmark_coordinates[11], landmark_coordinates[12]))
+      #print(h1, h2, h3, h4, h5)
+      height = 110.02 * h4 + 256.61 * h3 + 87.81 * h2 -107.5 * h1 + 86.66 * h5 + 66.57
+      height = 188.5 / 160 * height
+      #print(height)
+      solutions.drawing_utils.draw_landmarks(
       annotated_image,
       pose_landmarks_proto,
       solutions.pose.POSE_CONNECTIONS,
       solutions.drawing_styles.get_default_pose_landmarks_style())
+      cv2.putText(annotated_image, str(height), (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
   return annotated_image
 
 def add_data():
@@ -133,6 +141,7 @@ def add_data():
     print(df)
     print('add thành công')
 
+
 # Create the main window
 root = tk.Tk()
 root.title("Camera Viewer")
@@ -140,7 +149,7 @@ root.geometry("1500x700")
 
 # Camera display label
 lbl = Label(root)
-lbl.place(x=64, y=64, width=1000, height=480)
+lbl.place(x=64, y=64, width=640, height=480)
 
 # Distance entry
 label_distance = Label(root, text="Distance from camera to person:")
