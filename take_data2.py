@@ -47,20 +47,23 @@ def show_camera():
     #print(len(detection_result))
     frame = draw_landmarks_on_image(img.numpy_view(), detection_result)
 
-    frame = cv2.flip(frame, 1)
+    #frame = cv2.flip(frame, 1)
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     #cv2_imshow(cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR))
     #
     cur_frame = frame
 
     img = Image.fromarray(frame)
+    img = img.resize((350, 700))
     imgtk = ImageTk.PhotoImage(image=img)
     lbl.imgtk = imgtk
     lbl.configure(image=imgtk)
     lbl.after(10, show_camera)
 
+id = 0
+
 def draw_landmarks_on_image(rgb_image, detection_result):
-  global h1, h2, h3, h4, h5, height
+  global h1, h2, h3, h4, h5, height, id
 
   pose_landmarks_list = detection_result.pose_landmarks
   annotated_image = np.copy(rgb_image)
@@ -71,8 +74,11 @@ def draw_landmarks_on_image(rgb_image, detection_result):
 
       # Draw the pose landmarks.
       pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+      # pose_landmarks_proto.landmark.extend([
+      # landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in pose_landmarks
+      # ])
       pose_landmarks_proto.landmark.extend([
-      landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in pose_landmarks
+      landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=0) for landmark in pose_landmarks
       ])
 
       #landmark_coordinates = [np.array((landmark.x, landmark.y, landmark.z)) for landmark in pose_landmarks] 
@@ -90,15 +96,17 @@ def draw_landmarks_on_image(rgb_image, detection_result):
       h5 = helper.disPoint2Point(landmark_coordinates[0], 
                                  helper.middlePoint(landmark_coordinates[11], landmark_coordinates[12]))
       #print(h1, h2, h3, h4, h5)
-      height = 110.02 * h4 + 256.61 * h3 + 87.81 * h2 -107.5 * h1 + 86.66 * h5 + 66.57
-      height = 188.5 / 160 * height
+      id += 1
+      if (id % 10 == 0):
+         height = 110.02 * h4 + 256.61 * h3 + 87.81 * h2 -107.5 * h1 + 86.66 * h5 + 66.57
+         height = 188.5 / 160 * height
       #print(height)
       solutions.drawing_utils.draw_landmarks(
       annotated_image,
       pose_landmarks_proto,
       solutions.pose.POSE_CONNECTIONS,
       solutions.drawing_styles.get_default_pose_landmarks_style())
-      cv2.putText(annotated_image, str(height), (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+      cv2.putText(annotated_image, str(round(height,1)), (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
   return annotated_image
 
 def add_data():
@@ -149,7 +157,7 @@ root.geometry("1500x700")
 
 # Camera display label
 lbl = Label(root)
-lbl.place(x=64, y=64, width=640, height=480)
+lbl.place(x=0, y=0, width=640, height=700)
 
 # Distance entry
 label_distance = Label(root, text="Distance from camera to person:")
@@ -179,11 +187,11 @@ label_combo = ttk.Combobox(
 label_combo.place(x=1000, y=200)
 
 # Print button
-btn_print = Button(root, text="Add data", command=add_data)
+btn_print = Button(root, text="Take photo", command=add_data)
 btn_print.place(x=1000, y=250)
 
 # Open the camera
-cap = cv2.VideoCapture(2)
+cap = cv2.VideoCapture(0)
 
 # Start displaying the camera
 show_camera()
